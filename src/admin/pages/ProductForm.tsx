@@ -8,6 +8,13 @@ interface ProductImage {
     featured: boolean;
 }
 
+interface CertificationBadge {
+    id: string;
+    logo: string;
+    title: string;
+    subtitle?: string;
+}
+
 interface ProductFormData {
     title: string;
     description: string;
@@ -45,7 +52,9 @@ interface ProductFormData {
     certifications: {
         fssaiCertified: boolean;
         fssaiNumber?: string;
+        madeInIndia: boolean;
     };
+    badges: CertificationBadge[];
 }
 
 interface Props {
@@ -89,12 +98,16 @@ export default function ProductForm({ onClose, initialData, isEditing = false }:
             certifications: {
                 fssaiCertified: false,
                 fssaiNumber: '',
+                madeInIndia: false,
             },
+            badges: [],
         }
     );
 
     const [newTag, setNewTag] = useState('');
     const [newFeature, setNewFeature] = useState('');
+    const [badgeTitle, setBadgeTitle] = useState('');
+    const [badgeSubtitle, setBadgeSubtitle] = useState('');
     const [activeTab, setActiveTab] = useState<'basic' | 'media' | 'pricing' | 'inventory' | 'shipping' | 'seo' | 'details' | 'nutrition'>('basic');
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,6 +187,35 @@ export default function ProductForm({ onClose, initialData, isEditing = false }:
         setFormData({
             ...formData,
             features: formData.features.filter((f) => f !== feature),
+        });
+    };
+
+    const handleBadgeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && badgeTitle.trim()) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const newBadge: CertificationBadge = {
+                    id: Date.now().toString(),
+                    logo: event.target?.result as string,
+                    title: badgeTitle.trim(),
+                    subtitle: badgeSubtitle.trim() || undefined,
+                };
+                setFormData({
+                    ...formData,
+                    badges: [...formData.badges, newBadge],
+                });
+                setBadgeTitle('');
+                setBadgeSubtitle('');
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeBadge = (id: string) => {
+        setFormData({
+            ...formData,
+            badges: formData.badges.filter((badge) => badge.id !== id),
         });
     };
 
@@ -454,7 +496,100 @@ export default function ProductForm({ onClose, initialData, isEditing = false }:
                                             <p className="text-xs text-gray-500 mt-1">14-digit FSSAI license number</p>
                                         </div>
                                     )}
+
+                                    <div className="flex items-center gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                                        <input
+                                            type="checkbox"
+                                            id="madeInIndia"
+                                            checked={formData.certifications.madeInIndia}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    certifications: {
+                                                        ...formData.certifications,
+                                                        madeInIndia: e.target.checked,
+                                                    },
+                                                })
+                                            }
+                                            className="w-4 h-4 cursor-pointer"
+                                        />
+                                        <label htmlFor="madeInIndia" className="cursor-pointer flex-1">
+                                            <div className="font-semibold text-gray-900">Made in India</div>
+                                            <div className="text-xs text-gray-600">Product is proudly made in India</div>
+                                        </label>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div className="border-t border-gray-200 pt-6">
+                                <label className="block text-sm font-semibold text-gray-900 mb-4">🏅 Certification Badges & Logos</label>
+                                <p className="text-xs text-gray-600 mb-4">Upload custom logos and badges for certifications (FSSAI, Made in India, etc.)</p>
+
+                                <div className="space-y-4 mb-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-900 mb-2">Badge Title</label>
+                                            <input
+                                                type="text"
+                                                value={badgeTitle}
+                                                onChange={(e) => setBadgeTitle(e.target.value)}
+                                                placeholder="E.g., FSSAI Certified"
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-900 mb-2">Badge Subtitle (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={badgeSubtitle}
+                                                onChange={(e) => setBadgeSubtitle(e.target.value)}
+                                                placeholder="E.g., & Proudly Made in India"
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                        <label className="cursor-pointer">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Upload size={28} className="text-gray-400" />
+                                                <span className="text-sm font-medium text-gray-900">Click to upload badge logo</span>
+                                                <span className="text-xs text-gray-500">PNG, JPG, SVG (recommended: square format)</span>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleBadgeUpload}
+                                                disabled={!badgeTitle.trim()}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {formData.badges.length > 0 && (
+                                    <div className="border-t border-gray-200 pt-4">
+                                        <label className="block text-sm font-semibold text-gray-900 mb-3">Uploaded Badges ({formData.badges.length})</label>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            {formData.badges.map((badge) => (
+                                                <div key={badge.id} className="relative group border border-gray-200 rounded-lg p-3 text-center">
+                                                    <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center mb-2 overflow-hidden">
+                                                        <img src={badge.logo} alt={badge.title} className="max-h-20 max-w-20 object-contain" />
+                                                    </div>
+                                                    <p className="text-xs font-semibold text-gray-900">{badge.title}</p>
+                                                    {badge.subtitle && <p className="text-xs text-gray-600">{badge.subtitle}</p>}
+                                                    <button
+                                                        onClick={() => removeBadge(badge.id)}
+                                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
