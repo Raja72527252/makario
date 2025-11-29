@@ -42,6 +42,10 @@ interface ProductFormData {
         fat: string;
         fiber: string;
     };
+    certifications: {
+        fssaiCertified: boolean;
+        fssaiNumber?: string;
+    };
 }
 
 interface Props {
@@ -81,6 +85,10 @@ export default function ProductForm({ onClose, initialData, isEditing = false }:
                 carbs: '',
                 fat: '',
                 fiber: '',
+            },
+            certifications: {
+                fssaiCertified: false,
+                fssaiNumber: '',
             },
         }
     );
@@ -221,8 +229,8 @@ export default function ProductForm({ onClose, initialData, isEditing = false }:
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`px-6 py-4 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id
-                                    ? 'border-[#d4af37] text-[#d4af37]'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                                ? 'border-[#d4af37] text-[#d4af37]'
+                                : 'border-transparent text-gray-600 hover:text-gray-900'
                                 }`}
                         >
                             {tab.icon} {tab.label}
@@ -396,6 +404,56 @@ export default function ProductForm({ onClose, initialData, isEditing = false }:
                                             </button>
                                         </span>
                                     ))}
+                                </div>
+                            </div>
+
+                            <div className="border-t border-gray-200 pt-6">
+                                <label className="block text-sm font-semibold text-gray-900 mb-4">Certifications</label>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <input
+                                            type="checkbox"
+                                            id="fssaiCertified"
+                                            checked={formData.certifications.fssaiCertified}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    certifications: {
+                                                        ...formData.certifications,
+                                                        fssaiCertified: e.target.checked,
+                                                    },
+                                                })
+                                            }
+                                            className="w-4 h-4 cursor-pointer"
+                                        />
+                                        <label htmlFor="fssaiCertified" className="cursor-pointer flex-1">
+                                            <div className="font-semibold text-gray-900">FSSAI Certified</div>
+                                            <div className="text-xs text-gray-600">Product is certified by Food Safety and Standards Authority of India</div>
+                                        </label>
+                                    </div>
+
+                                    {formData.certifications.fssaiCertified && (
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-900 mb-2">FSSAI License Number</label>
+                                            <input
+                                                type="text"
+                                                value={formData.certifications.fssaiNumber}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        certifications: {
+                                                            ...formData.certifications,
+                                                            fssaiNumber: e.target.value,
+                                                        },
+                                                    })
+                                                }
+                                                placeholder="E.g., 12345678901234"
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">14-digit FSSAI license number</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
