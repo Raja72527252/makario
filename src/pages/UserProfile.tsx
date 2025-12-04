@@ -1,336 +1,606 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { User, Home, Edit, Trash2, RefreshCw, Star, CreditCard, Save, X, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { useAuth, UserAddress } from '../contexts/AuthContext';
+import { User, Edit2, Save, LogOut, MapPin, Phone, Mail, Calendar, CheckCircle, AlertCircle, Plus, Trash2, Star, X } from 'lucide-react';
 
-const dummyUser = {
-  name: 'Raja Raj',
-  email: 'raja@example.com',
-  phone: '9876543210',
-  avatar: 'https://ui-avatars.com/api/?name=Raja+Raj&background=golden&color=fff',
-  addresses: [
-    { id: 1, label: 'Home', address: '123 Main St, Patna, Bihar' },
-    { id: 2, label: 'Office', address: 'ARS Group, Patna, Bihar' }
-  ],
-  transactions: [
-    { id: 'TXN001', date: '2025-09-01', amount: 500, status: 'Completed' },
-    { id: 'TXN002', date: '2025-09-15', amount: 250, status: 'Refunded' }
-  ],
-  orders: [
-    { id: 'ORD001', product: 'Makhana 100g Pack of 1', rating: 5, returnStatus: 'None', exchangeStatus: 'None', img: '/src/assets/Product Front.jpg' },
-    { id: 'ORD002', product: 'Makhana 100g Pack of 2', rating: 4, returnStatus: 'Requested', exchangeStatus: 'None', img: '/src/assets/Product Back.jpg' }
-  ]
-};
+export const UserProfilePage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, logout, updateProfile, addAddress, updateAddress, deleteAddress, setDefaultAddress } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [showAddAddress, setShowAddAddress] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
 
-const tabs = [
-  { key: 'profile', label: 'Profile Info', icon: <User className="w-4 h-4 mr-1" /> },
-  { key: 'address', label: 'Address Management', icon: <Home className="w-4 h-4 mr-1" /> },
-  { key: 'returns', label: 'Returns/Exchanges', icon: <RefreshCw className="w-4 h-4 mr-1" /> },
-  { key: 'ratings', label: 'Ratings', icon: <Star className="w-4 h-4 mr-1" /> },
-  { key: 'transactions', label: 'Transaction History', icon: <CreditCard className="w-4 h-4 mr-1" /> },
-];
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+  });
 
-const UserProfile: React.FC = () => {
-  const [user, setUser] = useState(dummyUser);
-  const [newAddress, setNewAddress] = useState('');
-  const [activeTab, setActiveTab] = useState('profile');
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({ name: user.name, email: user.email, phone: user.phone });
-  const [editingAddressId, setEditingAddressId] = useState<number|null>(null);
-  const [addressForm, setAddressForm] = useState({ label: '', address: '' });
-  const [showTxnModal, setShowTxnModal] = useState<{open: boolean; txn?: any}>({open: false});
+  const [addressForm, setAddressForm] = useState<Omit<UserAddress, 'id'>>({
+    street: '',
+    city: '',
+    state: '',
+    pincode: '',
+    phone: '',
+    label: 'home',
+    isDefault: false,
+  });
 
-  const handleProfileEdit = () => setEditingProfile(true);
-  const handleProfileCancel = () => {
-    setEditingProfile(false);
-    setProfileForm({ name: user.name, email: user.email, phone: user.phone });
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-heritage mb-4">Please login first</h1>
+          <Button
+            onClick={() => navigate('/login')}
+            className="bg-gradient-to-r from-golden to-golden/90 text-white font-bold"
+          >
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-  const handleProfileSave = () => {
-    setUser({ ...user, ...profileForm });
-    setEditingProfile(false);
+
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setAddressForm(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }));
   };
 
-  const handleAddAddress = () => {
-    if (newAddress.trim()) {
-      setUser({
-        ...user,
-        addresses: [...user.addresses, { id: Date.now(), label: 'Other', address: newAddress }]
+  const handleSaveProfile = async () => {
+    setError('');
+    setSuccess('');
+
+    if (!formData.name || !formData.phone) {
+      setError('Please fill all required fields');
+      return;
+    }
+
+    setLoading(true);
+    const result = await updateProfile(formData);
+
+    if (result.success) {
+      setSuccess('Profile updated successfully');
+      setIsEditing(false);
+    } else {
+      setError(result.message);
+    }
+
+    setLoading(false);
+  };
+
+  const handleSaveAddress = async () => {
+    setError('');
+    setSuccess('');
+
+    if (!addressForm.street || !addressForm.city || !addressForm.state || !addressForm.pincode || !addressForm.phone) {
+      setError('Please fill all address fields');
+      return;
+    }
+
+    setLoading(true);
+    let result;
+
+    if (editingAddressId) {
+      result = await updateAddress(editingAddressId, addressForm);
+    } else {
+      result = await addAddress(addressForm);
+    }
+
+    if (result.success) {
+      setSuccess(editingAddressId ? 'Address updated successfully' : 'Address added successfully');
+      setShowAddAddress(false);
+      setEditingAddressId(null);
+      setAddressForm({
+        street: '',
+        city: '',
+        state: '',
+        pincode: '',
+        phone: '',
+        label: 'home',
+        isDefault: false,
       });
-      setNewAddress('');
+    } else {
+      setError(result.message);
+    }
+
+    setLoading(false);
+  };
+
+  const handleEditAddress = (address: UserAddress) => {
+    setAddressForm({
+      street: address.street,
+      city: address.city,
+      state: address.state,
+      pincode: address.pincode,
+      phone: address.phone,
+      label: address.label,
+      isDefault: address.isDefault,
+    });
+    setEditingAddressId(address.id);
+    setShowAddAddress(true);
+  };
+
+  const handleDeleteAddress = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this address?')) {
+      setLoading(true);
+      const result = await deleteAddress(id);
+
+      if (result.success) {
+        setSuccess('Address deleted successfully');
+      } else {
+        setError(result.message);
+      }
+
+      setLoading(false);
     }
   };
 
-  const handleDeleteAddress = (id: number) => {
-    setUser({
-      ...user,
-      addresses: user.addresses.filter(addr => addr.id !== id)
+  const handleSetDefault = async (id: string) => {
+    setLoading(true);
+    const result = await setDefaultAddress(id);
+
+    if (result.success) {
+      setSuccess('Default address updated');
+    } else {
+      setError(result.message);
+    }
+
+    setLoading(false);
+  };
+
+  const resetAddressForm = () => {
+    setAddressForm({
+      street: '',
+      city: '',
+      state: '',
+      pincode: '',
+      phone: '',
+      label: 'home',
+      isDefault: false,
     });
   };
 
-  const handleEditAddress = (addr: any) => {
-    setEditingAddressId(addr.id);
-    setAddressForm({ label: addr.label, address: addr.address });
-  };
-
-  const handleAddressSave = () => {
-    setUser({
-      ...user,
-      addresses: user.addresses.map(addr => addr.id === editingAddressId ? { ...addr, ...addressForm } : addr)
-    });
+  const cancelAddressForm = () => {
+    setShowAddAddress(false);
     setEditingAddressId(null);
-    setAddressForm({ label: '', address: '' });
+    resetAddressForm();
   };
 
-  const handleAddressCancel = () => {
-    setEditingAddressId(null);
-    setAddressForm({ label: '', address: '' });
-  };
+  const addresses = user.addresses || [];
 
-  const handleRequestReturn = (id: string) => {
-    setUser({
-      ...user,
-      orders: user.orders.map(order => order.id === id ? { ...order, returnStatus: 'Requested' } : order)
-    });
-  };
-
-  const handleRequestExchange = (id: string) => {
-    setUser({
-      ...user,
-      orders: user.orders.map(order => order.id === id ? { ...order, exchangeStatus: 'Requested' } : order)
-    });
-  };
-
-  const handleRateProduct = (id: string, rating: number) => {
-    setUser({
-      ...user,
-      orders: user.orders.map(order => order.id === id ? { ...order, rating } : order)
-    });
-  };
-
-  const handleTxnInfo = (txn: any) => setShowTxnModal({ open: true, txn });
-  const closeTxnModal = () => setShowTxnModal({ open: false });
+  // Auto-clear success message after 3 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   return (
     <>
       <Header />
-      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 min-h-screen bg-gradient-to-br from-golden/10 via-white to-heritage/10">
-        <h1 className="text-3xl sm:text-4xl font-extrabold mb-4 sm:mb-8 text-golden drop-shadow-lg text-center tracking-wide">User Profile</h1>
-        <div className="max-w-6xl mx-auto bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 border border-golden/20">
-          <div className="mb-6 sm:mb-8 border-b pb-4 overflow-x-auto">
-            <div className="w-full flex justify-start sm:justify-center">
-              <div className="flex sm:inline-flex bg-white rounded-xl shadow-lg px-2 py-1 border border-golden/20 w-full sm:w-auto overflow-x-auto">
-                {tabs.map(tab => (
-                  <button
-                    key={tab.key}
-                    className={`min-w-[120px] px-3 sm:px-4 py-2 rounded-lg font-semibold flex items-center justify-center transition-all duration-200 whitespace-nowrap mx-1 relative text-xs sm:text-sm
-                      ${activeTab === tab.key ? 'bg-gradient-to-r from-golden to-heritage text-white scale-105 shadow-lg' : 'bg-gray-100 text-heritage hover:bg-golden/20 hover:scale-105'}
-                    `}
-                    onClick={() => setActiveTab(tab.key)}
+      <div className="min-h-screen bg-gradient-to-br from-golden/5 via-white to-golden/10 pt-24 pb-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Profile Header Card */}
+          <Card className="mb-8 border-2 border-golden/30 shadow-2xl overflow-hidden bg-white">
+            <div className="bg-gradient-to-r from-golden via-golden/80 to-golden/60 h-40"></div>
+            <CardContent className="pt-0">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-8 -mt-20 mb-8">
+                {/* Avatar */}
+                <div className="w-40 h-40 rounded-full bg-white border-4 border-golden shadow-xl flex items-center justify-center flex-shrink-0">
+                  <User className="h-20 w-20 text-golden" />
+                </div>
+
+                {/* Welcome Text */}
+                <div className="flex-1 mt-6 md:mt-0">
+                  <h1 className="text-4xl font-bold text-heritage mb-2">{user.name}</h1>
+                  <div className="space-y-2">
+                    <p className="text-heritage/70 flex items-center gap-3">
+                      <Mail className="h-5 w-5 text-golden" /> {user.email}
+                    </p>
+                    <p className="text-heritage/70 flex items-center gap-3">
+                      <Phone className="h-5 w-5 text-golden" /> {formData.phone}
+                    </p>
+                    <p className="text-heritage/70 flex items-center gap-3">
+                      <Calendar className="h-5 w-5 text-golden" /> Member since {new Date(user.createdAt).toLocaleDateString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-3 w-full md:w-auto">
+                  {!isEditing && (
+                    <Button
+                      onClick={() => setIsEditing(true)}
+                      className="bg-golden hover:bg-golden/90 text-white font-bold h-11 rounded-lg"
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit Profile
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => {
+                      logout();
+                      navigate('/login');
+                    }}
+                    variant="destructive"
+                    className="h-11 rounded-lg font-bold"
                   >
-                    {tab.icon} <span className="ml-1">{tab.label}</span>
-                  </button>
-                ))}
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {activeTab === 'profile' && (
-            <div className="flex flex-col items-center">
-              <img src={user.avatar} alt="avatar" className="w-20 h-20 sm:w-24 sm:h-24 rounded-full mb-4 border-4 border-golden shadow-lg" />
-              <div className="bg-gradient-to-r from-golden/10 to-white rounded-xl p-4 sm:p-6 w-full mb-2 shadow flex flex-col items-center border border-golden/10">
-                {editingProfile ? (
-                  <>
-                    <input 
-                      className="mb-2 px-3 sm:px-4 py-2 border rounded-lg w-full focus:ring-golden text-sm sm:text-base" 
-                      value={profileForm.name} 
-                      onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
-                      placeholder="Name"
+          {/* Alerts */}
+          {error && (
+            <Alert className="mb-6 bg-red-50 border-2 border-red-200">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <AlertDescription className="text-red-600 ml-2 font-medium">
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="mb-6 bg-green-50 border-2 border-green-200">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <AlertDescription className="text-green-600 ml-2 font-medium">
+                {success}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Personal Information Section */}
+          {isEditing ? (
+            <Card className="mb-8 border-2 border-golden/30 shadow-lg bg-white">
+              <CardHeader className="bg-gradient-to-r from-golden/10 to-golden/5 border-b-2 border-golden/20">
+                <CardTitle className="text-2xl text-heritage flex items-center gap-2">
+                  <User className="h-6 w-6 text-golden" />
+                  Edit Personal Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label className="text-heritage font-semibold text-sm">Full Name</Label>
+                    <Input
+                      name="name"
+                      value={formData.name}
+                      onChange={handleProfileChange}
+                      className="mt-2 border-2 border-golden/20 focus:border-golden rounded-lg h-11"
+                      disabled={loading}
                     />
-                    <input 
-                      className="mb-2 px-3 sm:px-4 py-2 border rounded-lg w-full focus:ring-golden text-sm sm:text-base" 
-                      value={profileForm.email} 
-                      onChange={e => setProfileForm({ ...profileForm, email: e.target.value })}
-                      placeholder="Email"
+                  </div>
+
+                  <div>
+                    <Label className="text-heritage font-semibold text-sm">Phone Number</Label>
+                    <Input
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleProfileChange}
+                      className="mt-2 border-2 border-golden/20 focus:border-golden rounded-lg h-11"
+                      disabled={loading}
                     />
-                    <input 
-                      className="mb-2 px-3 sm:px-4 py-2 border rounded-lg w-full focus:ring-golden text-sm sm:text-base" 
-                      value={profileForm.phone} 
-                      onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
-                      placeholder="Phone"
-                    />
-                    <div className="flex flex-col sm:flex-row gap-2 mt-2 w-full sm:w-auto">
-                      <button className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-golden to-heritage text-white rounded-lg flex items-center justify-center shadow hover:scale-105" onClick={handleProfileSave}><Save className="w-4 h-4 mr-1" /> Save</button>
-                      <button className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-heritage rounded-lg flex items-center justify-center shadow hover:scale-105" onClick={handleProfileCancel}><X className="w-4 h-4 mr-1" /> Cancel</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-lg font-semibold mb-2">{user.name}</div>
-                    <div className="mb-1 text-gray-700">{user.email}</div>
-                    <div className="mb-1 text-gray-700">{user.phone}</div>
-                    <button className="mt-4 px-4 py-2 bg-gradient-to-r from-golden to-heritage text-white rounded-lg flex items-center shadow hover:scale-105" onClick={handleProfileEdit}><Edit className="w-4 h-4 mr-1" /> Edit Profile</button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+                  </div>
 
-          {activeTab === 'address' && (
-            <div>
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-golden">Address Management</h2>
-              <ul className="mb-4">
-                {user.addresses.map(addr => (
-                  <li key={addr.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gradient-to-r from-golden/5 to-white rounded-xl p-3 sm:p-4 mb-3 shadow border border-golden/10 transition-all duration-200 hover:scale-[1.02] gap-2">
-                    {editingAddressId === addr.id ? (
-                      <>
-                        <input className="px-3 sm:px-4 py-2 border rounded-lg w-full sm:w-auto focus:ring-golden mb-2 sm:mb-0" value={addressForm.label} onChange={e => setAddressForm({ ...addressForm, label: e.target.value })} placeholder="Label" />
-                        <input className="px-3 sm:px-4 py-2 border rounded-lg w-full focus:ring-golden mb-2 sm:mb-0" value={addressForm.address} onChange={e => setAddressForm({ ...addressForm, address: e.target.value })} placeholder="Address" />
-                        <div className="flex gap-2 w-full sm:w-auto justify-end">
-                          <button className="text-green-600 hover:scale-110" onClick={handleAddressSave}><Save className="w-4 h-4" /></button>
-                          <button className="text-gray-600 hover:scale-110" onClick={handleAddressCancel}><X className="w-4 h-4" /></button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <span className="flex items-center mb-2 sm:mb-0"><Home className="inline w-4 h-4 mr-1 text-golden flex-shrink-0" /><strong className="mr-1">{addr.label}:</strong> <span className="break-all">{addr.address}</span></span>
-                        <div className="flex gap-2 w-full sm:w-auto justify-end">
-                          <button onClick={() => handleEditAddress(addr)} className="text-blue-500 hover:text-blue-700 hover:scale-110"><Edit className="w-4 h-4" /></button>
-                          <button onClick={() => handleDeleteAddress(addr.id)} className="text-red-500 hover:text-red-700 hover:scale-110"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-col sm:flex-row gap-2 sm:items-center mt-2">
-                <input
-                  type="text"
-                  value={newAddress}
-                  onChange={e => setNewAddress(e.target.value)}
-                  placeholder="Add new address"
-                  className="border px-3 sm:px-4 py-2 rounded-lg focus:ring-golden flex-1 text-sm sm:text-base"
-                />
-                <button onClick={handleAddAddress} className="bg-gradient-to-r from-golden to-heritage text-white px-4 py-2 rounded-lg flex items-center justify-center shadow hover:scale-105 w-full sm:w-auto">
-                  <Home className="w-4 h-4 mr-1" /> Add Address
-                </button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'returns' && (
-            <div>
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-golden">Returns / Exchanges</h2>
-              <ul>
-                {user.orders.map(order => (
-                  <li key={order.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gradient-to-r from-golden/5 to-white rounded-xl p-3 sm:p-4 mb-3 shadow border border-golden/10 transition-all duration-200 hover:scale-[1.02] gap-3">
-                    <div className="flex items-center">
-                      <img src={order.img} alt="product" className="w-10 h-10 object-cover rounded mr-2 border shadow" />
-                      <strong className="text-sm sm:text-base">{order.product}</strong>
-                    </div>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold shadow ${order.returnStatus === 'Requested' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
-                          {order.returnStatus === 'None' ? 'No Return' : order.returnStatus}
-                        </span>
-                        <button className="px-3 py-1 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white rounded-lg text-xs shadow hover:scale-105" 
-                          onClick={() => handleRequestReturn(order.id)}>Request Return</button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold shadow ${order.exchangeStatus === 'Requested' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                          {order.exchangeStatus === 'None' ? 'No Exchange' : order.exchangeStatus}
-                        </span>
-                        <button className="px-3 py-1 bg-gradient-to-r from-blue-400 to-blue-600 text-white rounded-lg text-xs shadow hover:scale-105" 
-                          onClick={() => handleRequestExchange(order.id)}>Request Exchange</button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {activeTab === 'ratings' && (
-            <div>
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-golden">Ratings</h2>
-              <ul>
-                {user.orders.map(order => (
-                  <li key={order.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gradient-to-r from-golden/5 to-white rounded-xl p-3 sm:p-4 mb-3 shadow border border-golden/10 transition-all duration-200 hover:scale-[1.02]">
-                    <div className="flex items-center mb-2 sm:mb-0">
-                      <img src={order.img} alt="product" className="w-10 h-10 object-cover rounded mr-2 border shadow" />
-                      <span className="font-semibold text-sm sm:text-base">{order.product}</span>
-                    </div>
-                    <div className="flex gap-1">
-                      {[1,2,3,4,5].map(star => (
-                        <button key={star} onClick={() => handleRateProduct(order.id, star)} className="transition-transform duration-150 hover:scale-125">
-                          <Star className={`w-5 h-5 ${star <= order.rating ? 'text-yellow-500 drop-shadow' : 'text-gray-300'}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {activeTab === 'transactions' && (
-            <div>
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-golden">Transaction History</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm bg-gradient-to-r from-golden/5 to-white rounded-xl shadow border border-golden/10">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-golden to-heritage text-white text-xs sm:text-sm">
-                      <th className="p-2 sm:p-3 text-left">Txn ID</th>
-                      <th className="p-2 sm:p-3 text-left">Date</th>
-                      <th className="p-2 sm:p-3 text-left">Amount</th>
-                      <th className="p-2 sm:p-3 text-left">Status</th>
-                      <th className="p-2 sm:p-3 text-left">Info</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {user.transactions.map(txn => (
-                      <tr key={txn.id} className="border-b hover:bg-golden/10 transition-all duration-150 text-xs sm:text-sm">
-                        <td className="p-2 sm:p-3 font-semibold whitespace-nowrap">{txn.id}</td>
-                        <td className="p-2 sm:p-3 whitespace-nowrap">{txn.date}</td>
-                        <td className="p-2 sm:p-3 text-green-600 whitespace-nowrap">₹{txn.amount}</td>
-                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold shadow ${txn.status === 'Refunded' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{txn.status}</span>
-                        </td>
-                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                          <button onClick={() => handleTxnInfo(txn)} className="text-blue-500 hover:scale-110"><Info className="w-4 h-4" /></button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {showTxnModal.open && showTxnModal.txn && (
-                <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 px-4">
-                  <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md relative border border-golden/20">
-                    <button className="absolute top-2 right-2 text-gray-500 hover:scale-110" onClick={closeTxnModal}><X className="w-5 h-5" /></button>
-                    <h3 className="text-xl sm:text-2xl font-bold mb-4 text-golden text-center">Transaction Details</h3>
-                    <div className="space-y-3 text-sm sm:text-base">
-                      <div><strong>ID:</strong> {showTxnModal.txn.id}</div>
-                      <div><strong>Date:</strong> {showTxnModal.txn.date}</div>
-                      <div><strong>Amount:</strong> ₹{showTxnModal.txn.amount}</div>
-                      <div>
-                        <strong>Status:</strong> 
-                        <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold shadow 
-                          ${showTxnModal.txn.status === 'Refunded' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                          {showTxnModal.txn.status}
-                        </span>
-                      </div>
-                      <div><strong>Details:</strong> Dummy details for transaction.</div>
+                  <div>
+                    <Label className="text-heritage font-semibold text-sm">Email (Cannot be changed)</Label>
+                    <div className="mt-2 p-3 bg-golden/5 rounded-lg border-2 border-golden/10 text-heritage/70 font-medium">
+                      {user.email}
                     </div>
                   </div>
                 </div>
+
+                <div className="flex gap-3 mt-8 justify-end">
+                  <Button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setFormData({ name: user.name, phone: user.phone });
+                    }}
+                    variant="outline"
+                    className="px-8 h-11 border-2 rounded-lg font-semibold"
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveProfile}
+                    className="px-8 h-11 bg-golden hover:bg-golden/90 text-white font-bold rounded-lg"
+                    disabled={loading}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {loading ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Addresses Section */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-bold text-heritage flex items-center gap-2">
+                <MapPin className="h-8 w-8 text-golden" />
+                Saved Addresses
+              </h2>
+              {!showAddAddress && (
+                <Button
+                  onClick={() => {
+                    resetAddressForm();
+                    setEditingAddressId(null);
+                    setShowAddAddress(true);
+                  }}
+                  className="bg-golden hover:bg-golden/90 text-white font-bold h-11 rounded-lg"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Address
+                </Button>
               )}
             </div>
-          )}
+
+            {/* Add/Edit Address Form */}
+            {showAddAddress && (
+              <Card className="mb-8 border-2 border-golden/30 shadow-lg bg-white">
+                <CardHeader className="bg-gradient-to-r from-golden/10 to-golden/5 border-b-2 border-golden/20">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl text-heritage">
+                      {editingAddressId ? 'Edit Address' : 'Add New Address'}
+                    </CardTitle>
+                    <button
+                      onClick={cancelAddressForm}
+                      className="text-heritage/60 hover:text-heritage"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-heritage font-semibold text-sm">Street Address</Label>
+                      <Input
+                        name="street"
+                        placeholder="Street address"
+                        value={addressForm.street}
+                        onChange={handleAddressChange}
+                        className="mt-2 border-2 border-golden/20 focus:border-golden rounded-lg h-11"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-heritage font-semibold text-sm">City</Label>
+                      <Input
+                        name="city"
+                        placeholder="City"
+                        value={addressForm.city}
+                        onChange={handleAddressChange}
+                        className="mt-2 border-2 border-golden/20 focus:border-golden rounded-lg h-11"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-heritage font-semibold text-sm">State</Label>
+                      <Input
+                        name="state"
+                        placeholder="State"
+                        value={addressForm.state}
+                        onChange={handleAddressChange}
+                        className="mt-2 border-2 border-golden/20 focus:border-golden rounded-lg h-11"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-heritage font-semibold text-sm">Pincode</Label>
+                      <Input
+                        name="pincode"
+                        placeholder="Pincode"
+                        value={addressForm.pincode}
+                        onChange={handleAddressChange}
+                        className="mt-2 border-2 border-golden/20 focus:border-golden rounded-lg h-11"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-heritage font-semibold text-sm">Phone</Label>
+                      <Input
+                        name="phone"
+                        placeholder="Phone number"
+                        value={addressForm.phone}
+                        onChange={handleAddressChange}
+                        className="mt-2 border-2 border-golden/20 focus:border-golden rounded-lg h-11"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-heritage font-semibold text-sm">Label</Label>
+                      <select
+                        name="label"
+                        value={addressForm.label}
+                        onChange={handleAddressChange}
+                        className="mt-2 w-full px-4 py-2 border-2 border-golden/20 focus:border-golden rounded-lg h-11 bg-white text-heritage"
+                        disabled={loading}
+                      >
+                        <option value="home">Home</option>
+                        <option value="work">Work</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-8 justify-end">
+                    <Button
+                      onClick={cancelAddressForm}
+                      variant="outline"
+                      className="px-8 h-11 border-2 rounded-lg font-semibold"
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveAddress}
+                      className="px-8 h-11 bg-golden hover:bg-golden/90 text-white font-bold rounded-lg"
+                      disabled={loading}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {loading ? 'Saving...' : 'Save Address'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Addresses Grid */}
+            {addresses.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {addresses.map((address) => (
+                  <Card
+                    key={address.id}
+                    className={`border-2 shadow-lg hover:shadow-xl transition-all relative bg-white ${
+                      address.isDefault ? 'border-golden/50 bg-gradient-to-br from-golden/5 to-white' : 'border-golden/20'
+                    }`}
+                  >
+                    {address.isDefault && (
+                      <div className="absolute top-4 right-4 flex items-center gap-1 bg-golden/20 text-golden px-3 py-1 rounded-full text-xs font-bold">
+                        <Star className="h-3 w-3 fill-golden" />
+                        Default
+                      </div>
+                    )}
+
+                    <CardContent className="pt-6">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs text-heritage/60 font-semibold uppercase">
+                            {address.label === 'home' ? '🏠 Home' : address.label === 'work' ? '💼 Work' : '📍 Other'}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-heritage font-semibold text-sm">{address.street}</p>
+                          <p className="text-heritage/70 text-sm">
+                            {address.city}, {address.state} - {address.pincode}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-heritage/70 text-sm">
+                          <Phone className="h-4 w-4 text-golden" />
+                          {address.phone}
+                        </div>
+
+                        <Separator className="bg-golden/15" />
+
+                        <div className="flex gap-2 pt-2">
+                          {!address.isDefault && (
+                            <Button
+                              onClick={() => handleSetDefault(address.id)}
+                              variant="outline"
+                              className="flex-1 border-golden/20 text-golden hover:bg-golden/10 rounded-lg font-semibold text-sm h-10"
+                              disabled={loading}
+                            >
+                              <Star className="h-4 w-4 mr-1" />
+                              Set Default
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => handleEditAddress(address)}
+                            variant="outline"
+                            className="flex-1 border-golden/20 text-golden hover:bg-golden/10 rounded-lg font-semibold text-sm h-10"
+                            disabled={loading}
+                          >
+                            <Edit2 className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteAddress(address.id)}
+                            variant="outline"
+                            className="flex-1 border-red-200 text-red-600 hover:bg-red-50 rounded-lg font-semibold text-sm h-10"
+                            disabled={loading}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="border-2 border-dashed border-golden/30 bg-golden/5">
+                <CardContent className="pt-8 pb-8 text-center">
+                  <MapPin className="h-12 w-12 text-golden/40 mx-auto mb-4" />
+                  <p className="text-heritage/60 font-medium">No addresses added yet</p>
+                  <p className="text-heritage/50 text-sm mt-1">Click "Add Address" to add your first address</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <Separator className="my-12 bg-golden/20" />
+
+          {/* Quick Links */}
+          <div>
+            <h2 className="text-2xl font-bold text-heritage mb-6">Quick Links</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="border-2 border-golden/20 hover:border-golden/50 hover:shadow-xl transition-all cursor-pointer bg-white"
+                onClick={() => navigate('/orders')}>
+                <CardContent className="pt-8 text-center pb-8">
+                  <div className="text-5xl mb-4">📦</div>
+                  <h3 className="font-bold text-heritage text-lg mb-2">My Orders</h3>
+                  <p className="text-sm text-heritage/60">View and track your orders</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-golden/20 hover:border-golden/50 hover:shadow-xl transition-all cursor-pointer bg-white"
+                onClick={() => navigate('/wishlist')}>
+                <CardContent className="pt-8 text-center pb-8">
+                  <div className="text-5xl mb-4">❤️</div>
+                  <h3 className="font-bold text-heritage text-lg mb-2">Wishlist</h3>
+                  <p className="text-sm text-heritage/60">Your saved items</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-golden/20 hover:border-golden/50 hover:shadow-xl transition-all cursor-pointer bg-white"
+                onClick={() => navigate('/shop')}>
+                <CardContent className="pt-8 text-center pb-8">
+                  <div className="text-5xl mb-4">🛍️</div>
+                  <h3 className="font-bold text-heritage text-lg mb-2">Continue Shopping</h3>
+                  <p className="text-sm text-heritage/60">Explore more products</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );
 };
 
-export default UserProfile;
+export default UserProfilePage;

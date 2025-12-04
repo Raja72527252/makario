@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '../data/products';
+import { lockScroll, unlockScroll } from '../utils/scrollManager';
 
 interface WishlistContextType {
   items: Product[];
@@ -43,6 +44,15 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     localStorage.setItem('wishlist', JSON.stringify(items));
   }, [items]);
+
+  // Lock body scroll when wishlist is open
+  useEffect(() => {
+    if (isWishlistOpen) {
+      lockScroll();
+    } else {
+      unlockScroll();
+    }
+  }, [isWishlistOpen]);
 
   const addToWishlist = (product: Product) => {
     setItems(prevItems => {

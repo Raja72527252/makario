@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     middlewareMode: false,
+    hmr: {
+      host: "localhost",
+      port: 8080,
+      protocol: "ws",
+    },
   },
   plugins: [react()],
   resolve: {
@@ -30,12 +35,6 @@ export default defineConfig(({ mode }) => ({
     },
     // Reduce bundle size
     minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: mode === 'production',
-        drop_debugger: mode === 'production',
-      },
-    },
     // Enable CSS code splitting
     cssCodeSplit: true,
     // Set chunk size warning limit

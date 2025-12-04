@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '../data/products';
+import { lockScroll, unlockScroll } from '../utils/scrollManager';
 
 interface CartItem {
   product: Product;
@@ -51,6 +52,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
+
+  // Lock body scroll when cart is open
+  useEffect(() => {
+    if (isCartOpen) {
+      lockScroll();
+    } else {
+      unlockScroll();
+    }
+  }, [isCartOpen]);
 
   const addToCart = (product: Product, quantity = 1) => {
     setItems(prevItems => {

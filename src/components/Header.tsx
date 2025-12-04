@@ -1,21 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Menu, X, Phone, Mail, ShoppingCart, User, Heart, LogOut, Package } from "lucide-react";
+import { lockScroll, unlockScroll } from "@/utils/scrollManager";
 import { useCart } from "../contexts/CartContext";
 import { useWishlist } from "../contexts/WishlistContext";
 import { useAuth } from "../contexts/AuthContext";
-import { AuthModal } from "./auth/AuthModal";
+
 import { SearchModal } from "./SearchModal";
 import CartSidebar from "./CartSidebar";
 import WishlistSidebar from "./WishlistSidebar";
+import { UserDropdown } from "./UserDropdown";
 import makarioLogo from "../assets/Makario png Logo.jpg";
 
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [showAuthModal, setShowAuthModal] = useState(false);
     const [showSearchModal, setShowSearchModal] = useState(false);
     const [activeHover, setActiveHover] = useState<string | null>(null);
     const location = useLocation();
@@ -25,6 +25,15 @@ const Header = () => {
     const { user, logout } = useAuth();
 
     const isActive = (path: string) => location.pathname === path;
+
+    // Lock body scroll when mobile menu is open
+    useEffect(() => {
+        if (isMenuOpen) {
+            lockScroll();
+        } else {
+            unlockScroll();
+        }
+    }, [isMenuOpen]);
 
     const navLinks = [
         { name: "Home", href: "/" },
@@ -45,7 +54,7 @@ const Header = () => {
 
     return (
         <>
-            <header className="bg-white fixed top-0 left-0 right-0 w-full z-50 shadow-md border-b-2 border-golden/20">
+            <header className="bg-white fixed top-0 left-0 right-0 w-full z-40 shadow-md border-b-2 border-golden/20">
                 {/* Top Bar - Desktop Only */}
                 <div className="hidden lg:block bg-gradient-to-r from-heritage/5 to-golden/5 border-b border-golden/15">
                     <div className="container mx-auto px-4">
@@ -155,52 +164,17 @@ const Header = () => {
 
                             {/* User Menu */}
                             {user ? (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-11 px-4 rounded-xl hover:bg-golden/10 text-heritage hover:text-golden transition-all duration-300 font-semibold group"
-                                        >
-                                            <User className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                                            <span className="hidden md:inline md:ml-2 text-sm font-bold">{user.name}</span>
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-52 rounded-xl shadow-xl border border-golden/20">
-                                        <DropdownMenuItem asChild>
-                                            <Link to="/profile" className="cursor-pointer">
-                                                <User className="h-4 w-4 mr-2" />
-                                                Profile
-                                            </Link>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem asChild>
-                                            <Link to="/orders" className="cursor-pointer">
-                                                <Package className="h-4 w-4 mr-2" />
-                                                Orders
-                                            </Link>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem asChild>
-                                            <Link to="/wishlist" className="cursor-pointer">
-                                                <Heart className="h-4 w-4 mr-2" />
-                                                Wishlist
-                                            </Link>
-                                        </DropdownMenuItem>
-                                        <div className="h-px bg-golden/15 my-2" />
-                                        <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600">
-                                            <LogOut className="h-4 w-4 mr-2" />
-                                            Logout
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                <UserDropdown user={user} />
                             ) : (
-                                <Button
-                                    size="sm"
-                                    onClick={() => setShowAuthModal(true)}
-                                    className="h-11 px-6 bg-gradient-to-r from-golden to-golden/90 hover:from-golden/90 hover:to-golden/80 text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 group"
-                                >
-                                    <User className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                                    <span className="hidden md:inline md:ml-2">Login</span>
-                                </Button>
+                                <Link to="/login">
+                                    <Button
+                                        size="sm"
+                                        className="h-11 px-6 bg-gradient-to-r from-golden to-golden/90 hover:from-golden/90 hover:to-golden/80 text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 group"
+                                    >
+                                        <User className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                                        <span className="hidden md:inline md:ml-2">Login</span>
+                                    </Button>
+                                </Link>
                             )}
                         </div>
                     </div>
@@ -248,16 +222,12 @@ const Header = () => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <Button
-                                            className="w-full bg-gradient-to-r from-golden to-golden/90 hover:from-golden/90 hover:to-golden/80 text-white font-bold h-11 rounded-xl shadow-md transition-all transform hover:scale-105"
-                                            onClick={() => {
-                                                setIsMenuOpen(false);
-                                                setShowAuthModal(true);
-                                            }}
-                                        >
-                                            <User className="h-5 w-5 mr-2" />
-                                            Sign In
-                                        </Button>
+                                        <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                                            <Button className="w-full bg-gradient-to-r from-golden to-golden/90 hover:from-golden/90 hover:to-golden/80 text-white font-bold h-11 rounded-xl shadow-md transition-all transform hover:scale-105">
+                                                <User className="h-5 w-5 mr-2" />
+                                                Sign In
+                                            </Button>
+                                        </Link>
                                     )}
 
                                     {/* Navigation Links */}
@@ -327,7 +297,6 @@ const Header = () => {
 
             {/* Modals */}
             <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
-            <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} initialView="login" />
             <CartSidebar />
             <WishlistSidebar />
         </>
