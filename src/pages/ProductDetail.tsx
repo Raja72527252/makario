@@ -28,6 +28,7 @@ import Footer from '../components/Footer';
 import LazyImage from '../components/LazyImage';
 import SEO from '../components/SEO';
 import { StockAlert } from '../components/product/StockAlert';
+import CustomerTrustSection from '../components/CustomerTrustSection';
 
 const ProductDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -676,8 +677,11 @@ const ProductDetail: React.FC = () => {
                     </Tabs>
                 </div>
 
+                {/* Customer Trust Section */}
+                <CustomerTrustSection />
+
                 {/* Related Products */}
-                <div>
+                <div className="mt-16">
                     <h2 className="text-2xl font-bold mb-8 text-gray-900">Related products</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {relatedProducts.map((relatedProduct) => (

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, Gift, Clock3 } from 'lucide-react';
+import { X, Sparkles, Truck, Award, Zap } from 'lucide-react';
 
 const OfferPopup = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [timeLeft, setTimeLeft] = useState({ hours: 24, minutes: 0, seconds: 0 });
 
   useEffect(() => {
     // Show popup after a small delay
@@ -13,6 +14,36 @@ const OfferPopup = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const countdown = setInterval(() => {
+      setTimeLeft(prev => {
+        let { hours, minutes, seconds } = prev;
+        
+        if (seconds === 0) {
+          seconds = 59;
+          if (minutes === 0) {
+            minutes = 59;
+            if (hours === 0) {
+              return { hours: 24, minutes: 0, seconds: 0 };
+            }
+            hours--;
+          } else {
+            minutes--;
+          }
+        } else {
+          seconds--;
+        }
+        
+        return { hours, minutes, seconds };
+      });
+    }, 1000);
+
+    return () => clearInterval(countdown);
+  }, [isOpen]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -24,97 +55,163 @@ const OfferPopup = () => {
   if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity duration-500 ${isClosing ? 'opacity-0' : 'opacity-100'}`}>
-      <div className={`relative max-w-md w-full transform transition-all duration-500 ${isClosing ? 'scale-95' : 'scale-100'}`}>
-        {/* Main Card */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Close Button */}
+    <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm transition-opacity duration-500 ${isClosing ? 'opacity-0' : 'opacity-100'}`}>
+      <style>{`
+        @keyframes shine {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.5); }
+          50% { box-shadow: 0 0 30px rgba(212, 175, 55, 0.8); }
+        }
+        @keyframes slide-up {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .shine-effect::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          animation: shine 3s infinite;
+        }
+        .glow-box {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+      `}</style>
+
+      <div className={`relative w-full max-w-sm transform transition-all duration-500 ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`} style={{ animation: 'slide-up 0.6s ease-out' }}>
+        {/* Main Card with gradient border */}
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-2 border-golden/30">
+          
+          {/* Animated top stripe */}
+          <div className="h-1 sm:h-1.5 bg-gradient-to-r from-golden via-amber-400 to-golden shine-effect relative" />
+
+          {/* Close Button - Enhanced */}
           <button 
             onClick={handleClose}
-            className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-white/90 hover:bg-white text-gray-600 hover:text-black transition-all hover:scale-110 z-10"
+            className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-gradient-to-br from-golden/20 to-heritage/20 hover:from-golden/40 hover:to-heritage/40 text-gray-700 hover:text-black transition-all duration-300 hover:scale-110 z-20 border border-golden/30"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
-          {/* Top Design Element */}
-          <div className="h-1 sm:h-2 bg-gradient-to-r from-golden via-heritage to-golden" />
+          {/* Compact Header - Centered */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-golden/30 via-amber-100 to-heritage/20 py-5 sm:py-6 px-3 sm:px-4">
+            {/* Background pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-golden rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-20 h-20 bg-heritage rounded-full blur-3xl" />
+            </div>
 
-          {/* Header Image */}
-          <div className="relative h-32 sm:h-40 bg-gradient-to-br from-golden/20 to-heritage/20 overflow-hidden">
-            <img 
-              src="/src/assets/Product Front.jpg" 
-              alt="Makhana Special Offer"
-              className="w-full h-full object-cover mix-blend-overlay opacity-90"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-2xl sm:text-4xl font-bold text-heritage mb-1 sm:mb-2 drop-shadow-lg">
-                  Special Offer
-                </div>
-                <div className="text-base sm:text-xl text-heritage/90 font-medium drop-shadow">
-                  Limited Time Deal
-                </div>
+            {/* Centered Offer Text */}
+            <div className="relative text-center">
+              <div className="text-5xl sm:text-6xl font-black bg-gradient-to-r from-golden to-heritage bg-clip-text text-transparent leading-tight">
+                20%
+              </div>
+              <div className="text-lg sm:text-xl font-bold text-heritage">OFF</div>
+              <div className="inline-block mt-2 sm:mt-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-bold shadow-lg flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                LIMITED OFFER
               </div>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-4 sm:p-6">
-            {/* Offer Details */}
-            <div className="text-center mb-4 sm:mb-6">
-              <div className="text-4xl sm:text-5xl font-bold text-heritage mb-1 sm:mb-2">20% OFF</div>
-              <div className="text-sm sm:text-base text-gray-600">On Your First Order Above ₹999</div>
+          {/* Content Section - Compact */}
+          <div className="p-3 sm:p-4">
+            
+            {/* Offer Details - Condensed */}
+            <div className="text-center mb-3 sm:mb-3.5">
+              <p className="text-[11px] sm:text-xs text-gray-600 font-medium leading-tight">
+                First Order Above <span className="font-bold text-heritage">₹999</span>
+              </p>
+              <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5">Don't Miss This Deal!</p>
             </div>
 
-            {/* Features */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+            {/* Countdown Timer - Compact */}
+            <div className="bg-gradient-to-r from-golden/15 to-heritage/15 rounded-xl p-2.5 sm:p-3 mb-3 sm:mb-3.5 border border-golden/30 glow-box">
               <div className="text-center">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1 sm:mb-2 rounded-full bg-golden/10 flex items-center justify-center">
-                  <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-golden" />
+                <p className="text-[9px] sm:text-[10px] text-gray-600 font-bold mb-1.5">OFFER ENDS IN</p>
+                <div className="flex justify-center gap-1.5 sm:gap-2">
+                  <div className="bg-white rounded-lg p-1.5 sm:p-2 min-w-10 sm:min-w-11 shadow-sm border border-golden/20">
+                    <div className="text-sm sm:text-base font-bold text-heritage leading-none">
+                      {String(timeLeft.hours).padStart(2, '0')}
+                    </div>
+                    <div className="text-[7px] sm:text-[8px] text-gray-600 font-semibold">H</div>
+                  </div>
+                  <div className="text-base sm:text-lg font-bold text-heritage flex items-center">:</div>
+                  <div className="bg-white rounded-lg p-1.5 sm:p-2 min-w-10 sm:min-w-11 shadow-sm border border-golden/20">
+                    <div className="text-sm sm:text-base font-bold text-heritage leading-none">
+                      {String(timeLeft.minutes).padStart(2, '0')}
+                    </div>
+                    <div className="text-[7px] sm:text-[8px] text-gray-600 font-semibold">M</div>
+                  </div>
+                  <div className="text-base sm:text-lg font-bold text-heritage flex items-center">:</div>
+                  <div className="bg-white rounded-lg p-1.5 sm:p-2 min-w-10 sm:min-w-11 shadow-sm border border-golden/20">
+                    <div className="text-sm sm:text-base font-bold text-heritage leading-none">
+                      {String(timeLeft.seconds).padStart(2, '0')}
+                    </div>
+                    <div className="text-[7px] sm:text-[8px] text-gray-600 font-semibold">S</div>
+                  </div>
                 </div>
-                <div className="text-xs sm:text-sm text-gray-600">Premium Quality</div>
-              </div>
-              <div className="text-center">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1 sm:mb-2 rounded-full bg-golden/10 flex items-center justify-center">
-                  <Gift className="w-5 h-5 sm:w-6 sm:h-6 text-golden" />
-                </div>
-                <div className="text-xs sm:text-sm text-gray-600">Free Shipping</div>
-              </div>
-              <div className="text-center">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1 sm:mb-2 rounded-full bg-golden/10 flex items-center justify-center">
-                  <Clock3 className="w-5 h-5 sm:w-6 sm:h-6 text-golden" />
-                </div>
-                <div className="text-xs sm:text-sm text-gray-600">Fast Delivery</div>
               </div>
             </div>
 
-            {/* Coupon Code */}
-            <div className="bg-gradient-to-r from-golden/10 to-heritage/10 p-3 sm:p-4 rounded-lg sm:rounded-xl text-center mb-4 sm:mb-6">
-              <div className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Use Code</div>
-              <div className="text-xl sm:text-2xl font-bold text-heritage tracking-wider">WELCOME20</div>
+            {/* Benefits - Compact Icons */}
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-3.5">
+              <div className="text-center p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-golden/10 to-amber-100 border border-golden/20">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 mx-auto mb-1 rounded-full bg-gradient-to-br from-golden to-amber-500 flex items-center justify-center shadow-sm">
+                  <Award className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
+                </div>
+                <div className="text-[8px] sm:text-[9px] font-bold text-gray-700">Quality</div>
+              </div>
+              <div className="text-center p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-golden/10 to-amber-100 border border-golden/20">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 mx-auto mb-1 rounded-full bg-gradient-to-br from-golden to-amber-500 flex items-center justify-center shadow-sm">
+                  <Truck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
+                </div>
+                <div className="text-[8px] sm:text-[9px] font-bold text-gray-700">Shipping</div>
+              </div>
+              <div className="text-center p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-golden/10 to-amber-100 border border-golden/20">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 mx-auto mb-1 rounded-full bg-gradient-to-br from-golden to-amber-500 flex items-center justify-center shadow-sm">
+                  <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
+                </div>
+                <div className="text-[8px] sm:text-[9px] font-bold text-gray-700">Delivery</div>
+              </div>
             </div>
 
-            {/* Validity */}
-            <div className="text-center text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6">
-              <div className="flex items-center justify-center gap-1 sm:gap-2">
-                <Clock3 className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>Valid until October 31, 2025</span>
+            {/* Coupon Code Box - Compact */}
+            <div className="bg-gradient-to-r from-heritage/10 to-golden/10 border-2 border-dashed border-golden/50 rounded-xl p-2.5 sm:p-3 text-center mb-3 sm:mb-3.5 shine-effect relative overflow-hidden">
+              <p className="text-[9px] sm:text-[10px] text-gray-600 font-semibold mb-1">CODE</p>
+              <div className="text-xl sm:text-2xl font-black text-heritage tracking-widest drop-shadow-sm">
+                WELCOME20
               </div>
             </div>
 
             {/* CTA Button */}
             <button
               onClick={handleClose}
-              className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-golden to-heritage text-white text-sm sm:text-base rounded-lg sm:rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200"
+              className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-golden via-amber-500 to-heritage text-white font-bold text-sm sm:text-base rounded-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden group"
             >
-              Shop Now & Save
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
+                <Sparkles className="w-4 h-4" />
+                SHOP NOW
+              </span>
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </button>
 
-            {/* Terms */}
-            <div className="text-center text-[10px] sm:text-xs text-gray-400 mt-3 sm:mt-4">
-              *Terms and conditions apply
+            {/* Trust Text */}
+            <div className="text-center mt-2 px-2">
+              <p className="text-[8px] sm:text-[9px] text-gray-500 leading-tight">
+                ✓ Authentic | ✓ Secure | ✓ Guaranteed
+              </p>
             </div>
           </div>
+
+          {/* Bottom stripe */}
+          <div className="h-1 sm:h-1.5 bg-gradient-to-r from-heritage via-golden to-heritage shine-effect relative" />
         </div>
       </div>
     </div>

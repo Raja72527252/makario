@@ -11,6 +11,7 @@ import ComparisonSection from "@/components/ComparisonSection";
 import { ProductList } from "../components/product/ProductList";
 import { FeaturedProductsSection } from "../components/product/FeaturedProductsSection";
 import BlogSection from "@/components/BlogSection";
+import CustomerTrustSection from "@/components/CustomerTrustSection";
 import { getFeaturedProducts } from "../data/products";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -483,6 +484,11 @@ const Index = () => {
 
       {/* Comparison Section - Mere Makhana Ka Pack */}
       <ComparisonSection />
+
+
+
+      {/* Customer Trust Section */}
+      <CustomerTrustSection />
 
       {/* Features Section */}
       <section className="py-6 bg-muted/30">
